@@ -41,11 +41,11 @@ app.get('/api/salaries', (req, res) => {
 
 app.post('/api/salaries', (req, res) => {
   const s = req.body;
-  const sql = \`INSERT INTO salaries (
+  const sql = `INSERT INTO salaries (
     id, name, department, position, contract, month,
     netSalary, complement, ticket, mission, fuel,
     comm, bonus, irpp, cnss, totalNet, totalBrut
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\`;
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   const values = [
     s.id, s.name, s.department, s.position, s.contract, s.month,
     s.netSalary, s.complement, s.ticket, s.mission, s.fuel,
