@@ -1,62 +1,72 @@
 
-const express = require('express');
-const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const express = require("express");
+const cors = require("cors");
+const sqlite3 = require("sqlite3").verbose();
+const bodyParser = require("body-parser");
+const path = require("path");
+
 const app = express();
+const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-const db = new sqlite3.Database('./db.sqlite');
-
-// Create table if not exists
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS salaries (
-    id TEXT,
-    name TEXT,
-    department TEXT,
-    position TEXT,
-    contract TEXT,
-    month TEXT,
-    netSalary REAL,
-    complement REAL,
-    ticket REAL,
-    mission REAL,
-    fuel REAL,
-    comm REAL,
-    bonus REAL,
-    irpp REAL,
-    cnss REAL,
-    totalNet REAL,
-    totalBrut REAL
-  )`);
+// SQLite DB setup
+const db = new sqlite3.Database("./salaries.db", (err) => {
+    if (err) console.error("DB connection error", err.message);
+    else console.log("Connected to SQLite database");
 });
 
-app.get('/api/salaries', (req, res) => {
-  db.all('SELECT * FROM salaries', [], (err, rows) => {
-    if (err) return res.status(500).json(err);
-    res.json(rows);
-  });
+// Create salaries table if not exists
+db.run(`CREATE TABLE IF NOT EXISTS salaries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT,
+    prenom TEXT,
+    salaire_base REAL,
+    prime REAL,
+    mois TEXT,
+    departement TEXT,
+    contrat TEXT
+)`);
+
+// Login endpoint (hardcoded credentials)
+app.post("/api/login", (req, res) => {
+    const { username, password } = req.body;
+    if (username === "admin" && password === "1234") {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
 });
 
-app.post('/api/salaries', (req, res) => {
-  const s = req.body;
-  const sql = `INSERT INTO salaries (
-    id, name, department, position, contract, month,
-    netSalary, complement, ticket, mission, fuel,
-    comm, bonus, irpp, cnss, totalNet, totalBrut
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  const values = [
-    s.id, s.name, s.department, s.position, s.contract, s.month,
-    s.netSalary, s.complement, s.ticket, s.mission, s.fuel,
-    s.comm, s.bonus, s.irpp, s.cnss, s.totalNet, s.totalBrut
-  ];
-  db.run(sql, values, function(err) {
-    if (err) return res.status(500).json(err);
-    res.json({ status: 'success', id: this.lastID });
-  });
+// Add salary
+app.post("/api/salaries", (req, res) => {
+    const { nom, prenom, salaire_base, prime, mois, departement, contrat } = req.body;
+    const sql = `INSERT INTO salaries (nom, prenom, salaire_base, prime, mois, departement, contrat)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [nom, prenom, salaire_base, prime, mois, departement, contrat], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID });
+    });
 });
 
-app.listen(5000, () => {
-  console.log('✅ SQLite server running on port 5000');
+// Get all or filtered salaries
+app.get("/api/salaries", (req, res) => {
+    const { month } = req.query;
+    let sql = "SELECT * FROM salaries";
+    const params = [];
+
+    if (month) {
+        sql += " WHERE mois = ?";
+        params.push(month);
+    }
+
+    db.all(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
 });
+
+// Start server
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
